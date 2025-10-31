@@ -60,6 +60,7 @@ interface BillTransaction {
   bill: {
     description: string | null;
     bill_amount: number;
+    bill_number: string | null;
   };
 }
 
@@ -138,7 +139,7 @@ const MahajanDetails: React.FC<MahajanDetailsProps> = ({ mahajan, onBack, onUpda
       if (billsData && billsData.length > 0) {
         const { data: transactions, error: transError } = await supabase
           .from('bill_transactions')
-          .select(`*, bill:bills(description, bill_amount)`)
+          .select(`*, bill:bills(description, bill_amount, bill_number)`)
           .in('bill_id', billsData.map(b => b.id))
           .order('payment_date', { ascending: false });
 
