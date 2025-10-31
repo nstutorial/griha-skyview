@@ -29,34 +29,25 @@ const SearchTransactionById = ({ transactions }: { transactions: Transaction[] }
   const itemsPerPage = 5;
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // 🔍 Search by multiple fields
+  // 🔍 Search by Reference Number only (8-digit payment reference)
   const handleSearch = () => {
-    const term = searchTerm.trim().toLowerCase();
+    const term = searchTerm.trim();
     if (!term) {
-      toast.error('Please enter a search term');
+      toast.error('Please enter a reference number');
       setFilteredTransactions([]);
       return;
     }
 
+    // Search only by reference number in notes field
     const result = transactions.filter((t) => {
-      const billNumber = t.bill?.bill_number?.toLowerCase() || '';
-      const billDescription = t.bill?.description?.toLowerCase() || '';
-      const amount = t.amount.toString();
-      const date = t.payment_date;
-      const notes = t.notes?.toLowerCase() || '';
-      const mode = t.payment_mode.toLowerCase();
-      const type = t.transaction_type.toLowerCase();
-      
-      return billNumber.includes(term) ||
-             billDescription.includes(term) ||
-             amount.includes(term) ||
-             date.includes(term) ||
-             notes.includes(term) ||
-             mode.includes(term) ||
-             type.includes(term);
+      const notes = t.notes || '';
+      // Look for REF#12345678 pattern
+      return notes.includes(`REF#${term}`);
     });
     
-    if (result.length === 0) toast.error('No matching transactions found');
+    if (result.length === 0) {
+      toast.error('No payment found with this reference number');
+    }
 
     setFilteredTransactions(result);
     setCurrentPage(1);
@@ -140,10 +131,11 @@ const SearchTransactionById = ({ transactions }: { transactions: Transaction[] }
       <div className="flex items-center space-x-2">
         <Input
           type="text"
-          placeholder="Search by bill number, amount, date, notes..."
+          placeholder="Enter 8-digit payment reference number"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+          maxLength={8}
         />
         <Button onClick={handleSearch}>Search</Button>
         <Button variant="outline" onClick={handleReset}>
@@ -219,7 +211,7 @@ const SearchTransactionById = ({ transactions }: { transactions: Transaction[] }
         </>
       ) : (
         <p className="text-center text-muted-foreground pt-6">
-          No transactions to display. Enter a search term to find transactions.
+          No transactions to display. Enter a payment reference number to find all transactions from that payment.
         </p>
       )}
 

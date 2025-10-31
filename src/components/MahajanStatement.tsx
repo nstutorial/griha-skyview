@@ -219,6 +219,15 @@ const MahajanStatement: React.FC<MahajanStatementProps> = ({ mahajan }) => {
       const firstTransaction = groupedTransactions[0];
       const totalAmount = groupedTransactions.reduce((sum, t) => sum + t.amount, 0);
       
+      // Extract reference number from notes
+      let referenceNumber = '';
+      if (firstTransaction.notes) {
+        const refMatch = firstTransaction.notes.match(/REF#(\d{8})/);
+        if (refMatch) {
+          referenceNumber = refMatch[1];
+        }
+      }
+      
       // Build description with all bill details
       let description = `Payment Received`;
       
@@ -243,7 +252,7 @@ const MahajanStatement: React.FC<MahajanStatementProps> = ({ mahajan }) => {
       allEntries.push({
         date: firstTransaction.payment_date,
         description: description,
-        reference: groupedTransactions.length.toString(),
+        reference: referenceNumber || 'N/A',
         debit: 0,
         credit: totalAmount,
         balance: 0, // Will be calculated after sorting
