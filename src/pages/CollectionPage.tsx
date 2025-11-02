@@ -194,7 +194,8 @@ const CollectionPage = ({ selectedDay }: CollectionPageProps) => {
   const calculateCustomerEMIAmount = (customer: Customer) => {
     const activeLoans = customer.loans?.filter(loan => loan.is_active) || [];
     return activeLoans.reduce((sum, loan) => {
-      return sum + ((loan as any).emi_amount || 0);
+      const emiAmount = parseFloat(((loan as any).emi_amount || 0).toString());
+      return sum + (isNaN(emiAmount) ? 0 : emiAmount);
     }, 0);
   };
 
