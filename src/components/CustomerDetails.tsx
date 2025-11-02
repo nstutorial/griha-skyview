@@ -153,6 +153,9 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer, onBack }) =
         description: "The payment has been successfully recorded.",
       });
 
+      // Dispatch event to refresh daywise payment schedule
+      window.dispatchEvent(new CustomEvent('payment-recorded'));
+
       setPaymentData({
         amount: '',
         paymentType: 'principal',
