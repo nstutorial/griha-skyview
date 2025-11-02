@@ -193,11 +193,18 @@ const CustomerStatement: React.FC<CustomerStatementProps> = ({ customer }) => {
     setStatement(statementEntries);
   };
 
-  const calculateLoanBalance = (loanId: string) => {
-    const loanTransactions = transactions.filter(t => t.loan_id === loanId);
+  // const calculateLoanBalance = (loanId: string) => {
+  //   const loanTransactions = transactions.filter(t => t.loan_id === loanId);
+  //   const totalPaid = loanTransactions.reduce((sum, t) => sum + t.amount, 0);
+  //   const loan = loans.find(l => l.id === loanId);
+  //   return loan ? loan.principal_amount - totalPaid : 0;
+  // };
+
+  const calculateLoanBalance = (loan: Loan) => {
+    const loanTransactions = transactions.filter(t => t.loan_id === loan.id);
     const totalPaid = loanTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const loan = loans.find(l => l.id === loanId);
-    return loan ? loan.principal_amount - totalPaid : 0;
+    const initialOutstanding = loan.total_outstanding || loan.principal_amount;
+    return initialOutstanding - totalPaid;
   };
 
   const calculateInterest = (loan: Loan, balance: number) => {
