@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import CustomerDetails from '@/components/CustomerDetails';
 import { 
   Select,
   SelectContent,
@@ -33,10 +34,13 @@ interface Customer {
   loans?: Array<{
     id: string;
     principal_amount: number;
+    processing_fee?: number;
+    total_outstanding?: number;
     is_active: boolean;
     interest_rate: number;
     interest_type: string;
     loan_date: string;
+    emi_amount?: number;
   }>;
 }
 
@@ -73,6 +77,7 @@ const CollectionPage = ({ selectedDay }: CollectionPageProps) => {
   const [showPaymentForm, setShowPaymentForm] = useState<{[key: string]: boolean}>({});
   const [paymentErrors, setPaymentErrors] = useState<{[key: string]: string}>({});
   const [confirmedTransactions, setConfirmedTransactions] = useState<{[key: string]: boolean}>({});
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   const dayLabels = {
     sunday: 'Sunday',
@@ -99,7 +104,7 @@ const CollectionPage = ({ selectedDay }: CollectionPageProps) => {
         .from('customers')
         .select(`
           *,
-          loans:loans(id, principal_amount, is_active, interest_rate, interest_type, loan_date)
+          loans:loans(id, principal_amount, processing_fee, total_outstanding, is_active, interest_rate, interest_type, loan_date, emi_amount)
         `)
         .eq('user_id', user?.id)
         .order('name');
@@ -172,20 +177,14 @@ const CollectionPage = ({ selectedDay }: CollectionPageProps) => {
   const calculateCustomerOutstanding = (customer: Customer) => {
     const activeLoans = customer.loans?.filter(loan => loan.is_active) || [];
     return activeLoans.reduce((sum, loan) => {
-      const balance = calculateLoanBalance(customer.id, loan.id);
-      const interest = calculateInterest(loan, balance);
-      return sum + balance + interest;
+      return sum + (loan.total_outstanding || 0);
     }, 0);
   };
 
   const calculateCustomerEMIAmount = (customer: Customer) => {
     const activeLoans = customer.loans?.filter(loan => loan.is_active) || [];
     return activeLoans.reduce((sum, loan) => {
-      // Calculate EMI based on principal amount and interest rate
-      // For now, using a simple calculation - you can adjust this logic
-      const monthlyRate = loan.interest_type === 'monthly' ? loan.interest_rate / 100 : 0;
-      const emiAmount = monthlyRate > 0 ? loan.principal_amount * monthlyRate : loan.principal_amount * 0.05; // 5% default
-      return sum + emiAmount;
+      return sum + ((loan as any).emi_amount || 0);
     }, 0);
   };
 
@@ -359,6 +358,19 @@ const CollectionPage = ({ selectedDay }: CollectionPageProps) => {
 
   const filteredCustomers = activeTab === 'scheduled' ? getScheduledCustomers() : getTodayCollectedCustomers();
 
+  // If a customer is selected, show their details
+  if (selectedCustomer) {
+    return (
+      <CustomerDetails
+        customer={selectedCustomer}
+        onBack={() => {
+          setSelectedCustomer(null);
+          fetchCustomers(); // Refresh data when coming back
+        }}
+      />
+    );
+  }
+
   const handlePayment = async (customer: Customer) => {
     if (!user) return;
     
@@ -422,8 +434,10 @@ const CollectionPage = ({ selectedDay }: CollectionPageProps) => {
       // Switch to collected tab to show the payment
       setActiveTab('collected');
 
-      // Refresh data
-      fetchCustomers();
+      // Refresh data with a small delay to ensure database triggers complete
+      setTimeout(() => {
+        fetchCustomers();
+      }, 300);
     } catch (error) {
       console.error('Error recording payment:', error);
       toast({
@@ -696,9 +710,11 @@ const CollectionPage = ({ selectedDay }: CollectionPageProps) => {
         description,
       });
 
-      // Refresh data
-      fetchCustomers();
-      cancelEditingPayment(customerId, paymentId);
+      // Refresh data with a small delay to ensure database triggers complete
+      setTimeout(() => {
+        fetchCustomers();
+        cancelEditingPayment(customerId, paymentId);
+      }, 300);
     } catch (error) {
       console.error('Error updating payment:', error);
       toast({
@@ -1807,8 +1823,9 @@ const CollectionPage = ({ selectedDay }: CollectionPageProps) => {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => navigate(`/customers/${customer.id}`)}
+                                onClick={() => setSelectedCustomer(customer)}
                                 className="flex-shrink-0"
+                                title="View customer details"
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
@@ -2060,8 +2077,9 @@ const CollectionPage = ({ selectedDay }: CollectionPageProps) => {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => navigate(`/customers/${customer.id}`)}
+                              onClick={() => setSelectedCustomer(customer)}
                               className="flex-shrink-0"
+                              title="View customer details"
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
