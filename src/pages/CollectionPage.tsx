@@ -1820,13 +1820,11 @@ const CollectionPage = ({ selectedDay }: CollectionPageProps) => {
                           
                           <div className="text-right space-y-2 min-w-0 flex-shrink-0">
                             <div className="space-y-1">
-                              {emiAmount > 0 && (
-                                <p className="text-sm font-semibold text-purple-700 truncate bg-purple-50 px-2 py-1 rounded">
-                                  EMI: {formatCurrency(emiAmount)}
-                                </p>
-                              )}
                               <p className="text-sm font-medium text-green-600 truncate">
                                 Outstanding: {formatCurrency(outstandingBalance)}
+                              </p>
+                              <p className="text-sm font-semibold text-purple-700 truncate bg-purple-50 px-2 py-1 rounded">
+                                EMI: {formatCurrency(emiAmount)}
                               </p>
                             </div>
                             
