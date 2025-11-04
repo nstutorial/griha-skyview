@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Phone, Trash2, MapPin, Eye, Calendar, Edit, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Phone, Trash2, MapPin, Eye, Calendar, Edit, Plus, ChevronLeft, ChevronRight, Lock, Unlock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useControl } from '@/contexts/ControlContext';
 import CustomerDetails from './CustomerDetails';
@@ -25,6 +25,7 @@ interface Customer {
   phone: string | null;
   address: string | null;
   payment_day: string | null;
+  locked?: boolean;
   loans?: Array<{
     id: string;
     principal_amount: number;
@@ -109,10 +110,50 @@ const CustomersList = ({ onUpdate }: CustomersListProps) => {
     }
   };
 
+  const toggleLock = async (customer: Customer) => {
+    try {
+      const newLockedState = !customer.locked;
+      const { error } = await supabase
+        .from('customers')
+        .update({ locked: newLockedState })
+        .eq('id', customer.id);
+
+      if (error) throw error;
+
+      setCustomers(customers.map(c => 
+        c.id === customer.id ? { ...c, locked: newLockedState } : c
+      ));
+
+      toast({
+        title: newLockedState ? "Customer locked" : "Customer unlocked",
+        description: newLockedState 
+          ? "Customer can no longer be edited or deleted." 
+          : "Customer can now be edited or deleted.",
+      });
+    } catch (error) {
+      console.error('Error toggling lock:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to toggle lock status",
+      });
+    }
+  };
+
   const deleteCustomer = async (id: string) => {
     try {
       // Check if customer has active loans
       const customer = customers.find(c => c.id === id);
+      
+      if (customer?.locked) {
+        toast({
+          variant: "destructive",
+          title: "Cannot delete customer",
+          description: "This customer is locked. Unlock it first to delete.",
+        });
+        return;
+      }
+
       const hasActiveLoans = customer?.loans?.some(loan => loan.is_active);
       
       if (hasActiveLoans) {
@@ -348,11 +389,20 @@ const CustomersList = ({ onUpdate }: CustomersListProps) => {
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
+                  <Button
+                    variant={customer.locked ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleLock(customer)}
+                    title={customer.locked ? "Unlock customer" : "Lock customer"}
+                  >
+                    {customer.locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                  </Button>
                   {controlSettings.allowEdit && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEditCustomer(customer)}
+                      disabled={customer.locked}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -363,6 +413,7 @@ const CustomersList = ({ onUpdate }: CustomersListProps) => {
                       size="sm"
                       onClick={() => deleteCustomer(customer.id)}
                       className="text-destructive hover:text-destructive"
+                      disabled={customer.locked}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
