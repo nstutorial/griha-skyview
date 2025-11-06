@@ -763,11 +763,8 @@ const MahajanStatement: React.FC<MahajanStatementProps> = ({ mahajan }) => {
                           </Badge>
                         </div>
                       </td>
-                      {/* <td className="p-3 text-sm text-gray-600">{entry.reference}</td> */}
-                      <td className="p-3 text-sm text-gray-600">
-                        {`${entry.reference}${entry.notes ? ` - ${entry.notes}` : ''}`}
-                      </td>
-                      <td className="p-3 text-right">
+                      <td className="p-3 text-sm text-gray-600">{entry.reference}</td> 
+                       <td className="p-3 text-right">
                         {entry.debit > 0 ? (
                           <span className="text-red-600 font-medium">{formatCurrency(entry.debit)}</span>
                         ) : (
