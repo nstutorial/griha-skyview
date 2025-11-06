@@ -259,7 +259,7 @@ const MahajanStatement: React.FC<MahajanStatementProps> = ({ mahajan }) => {
       if (isInRange) {
         allEntries.push({
           date: bill.bill_date,
-          description: `Bill - ${bill.description}`,
+          description: `Bill - ${bill.description} -${bill.notes}`,
           reference: bill.bill_number,
           debit: bill.bill_amount,
           credit: 0,
