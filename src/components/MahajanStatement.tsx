@@ -259,7 +259,7 @@ const MahajanStatement: React.FC<MahajanStatementProps> = ({ mahajan }) => {
       if (isInRange) {
         allEntries.push({
           date: bill.bill_date,
-          description: `Bill - ${bill.description} -${bill.notes}`,
+          description: `Bill - ${bill.description}`,
           reference: bill.bill_number,
           debit: bill.bill_amount,
           credit: 0,
@@ -749,6 +749,7 @@ const MahajanStatement: React.FC<MahajanStatementProps> = ({ mahajan }) => {
                       <td className="p-3">
                         <div className="flex items-center gap-2">
                           <span className="whitespace-pre-line">{entry.description}</span>
+                           <span className="whitespace-pre-line">{entry.notes}</span>
                           <Badge 
                              variant={
                               entry.type === 'bill_disbursement' ? 'destructive' :
