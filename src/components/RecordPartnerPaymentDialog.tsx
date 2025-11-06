@@ -182,6 +182,25 @@ export function RecordPartnerPaymentDialog({
             .from('mahajans')
             .update({ advance_payment: (mahajan.advance_payment || 0) + remainingAmount })
             .eq('id', mahajanId);
+          
+          // Insert advance payment transaction record
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await supabase
+                .from('advance_payment_transactions' as any)
+                .insert({
+                  user_id: user.id,
+                  mahajan_id: mahajanId,
+                  amount: remainingAmount,
+                  payment_date: paymentDate,
+                  payment_mode: paymentMode as 'cash' | 'bank',
+                  notes: `Overpayment from partner payment${notes ? ' - ' + notes : ''}`,
+                });
+            }
+          } catch (err) {
+            console.log('Advance payment transaction table not available yet');
+          }
         }
       }
 

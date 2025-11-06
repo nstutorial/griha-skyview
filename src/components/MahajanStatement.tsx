@@ -67,6 +67,14 @@ interface PartnerTransaction {
   } | null;
 }
 
+interface AdvancePaymentTransaction {
+  id: string;
+  amount: number;
+  payment_date: string;
+  payment_mode: string;
+  notes: string | null;
+}
+
 interface StatementEntry {
   date: string;
   description: string;
@@ -74,7 +82,7 @@ interface StatementEntry {
   debit: number;
   credit: number;
   balance: number;
-  type: 'bill_disbursement' | 'payment_paid' | 'interest_accrued' | 'firm_payment' | 'partner_payment';
+  type: 'bill_disbursement' | 'payment_paid' | 'interest_accrued' | 'firm_payment' | 'partner_payment' | 'advance_payment';
 }
 
 interface MahajanStatementProps {
@@ -88,6 +96,7 @@ const MahajanStatement: React.FC<MahajanStatementProps> = ({ mahajan }) => {
   const [transactions, setTransactions] = useState<BillTransaction[]>([]);
   const [firmTransactions, setFirmTransactions] = useState<FirmTransaction[]>([]);
   const [partnerTransactions, setPartnerTransactions] = useState<PartnerTransaction[]>([]);
+  const [advancePaymentTransactions, setAdvancePaymentTransactions] = useState<AdvancePaymentTransaction[]>([]);
   const [statement, setStatement] = useState<StatementEntry[]>([]);
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -100,10 +109,10 @@ const MahajanStatement: React.FC<MahajanStatementProps> = ({ mahajan }) => {
   }, [user, mahajan.id]);
 
   useEffect(() => {
-    if (bills.length > 0 || firmTransactions.length > 0 || partnerTransactions.length > 0) {
+    if (bills.length > 0 || firmTransactions.length > 0 || partnerTransactions.length > 0 || advancePaymentTransactions.length > 0) {
       generateStatement();
     }
-  }, [bills, transactions, firmTransactions, partnerTransactions, startDate, endDate]);
+  }, [bills, transactions, firmTransactions, partnerTransactions, advancePaymentTransactions, startDate, endDate]);
 
   // Realtime subscriptions for partner transaction updates
   useEffect(() => {
@@ -181,6 +190,23 @@ const MahajanStatement: React.FC<MahajanStatementProps> = ({ mahajan }) => {
 
       if (partnerTransError) throw partnerTransError;
 
+      // Fetch advance payment transactions for this mahajan
+      let advancePaymentTransData: AdvancePaymentTransaction[] = [];
+      try {
+        const { data, error: advancePaymentTransError } = await supabase
+          .from('advance_payment_transactions' as any)
+          .select('*')
+          .eq('mahajan_id', mahajan.id)
+          .order('payment_date', { ascending: true });
+
+        if (!advancePaymentTransError && data) {
+          advancePaymentTransData = data as unknown as AdvancePaymentTransaction[];
+        }
+      } catch (err) {
+        // Table might not exist yet
+        console.log('Advance payment transactions table not available yet');
+      }
+
       let transactionsData: BillTransaction[] = [];
 
       // Fetch transactions (only if there are bills)
@@ -203,6 +229,7 @@ const MahajanStatement: React.FC<MahajanStatementProps> = ({ mahajan }) => {
       setBills(billsData || []);
       setFirmTransactions(firmTransData || []);
       setPartnerTransactions(partnerTransData || []);
+      setAdvancePaymentTransactions(advancePaymentTransData);
 
     } catch (error) {
       console.error('Error fetching mahajan data:', error);
@@ -344,6 +371,25 @@ const MahajanStatement: React.FC<MahajanStatementProps> = ({ mahajan }) => {
       }
     });
 
+    // Add advance payment transactions
+    advancePaymentTransactions.forEach(advanceTrans => {
+      const transDate = new Date(advanceTrans.payment_date);
+      const isInRange = (!startDate || transDate >= new Date(startDate)) && 
+                       (!endDate || transDate <= new Date(endDate));
+
+      if (isInRange) {
+        allEntries.push({
+          date: advanceTrans.payment_date,
+          description: `Advance Payment${advanceTrans.notes ? ' - ' + advanceTrans.notes : ''}`,
+          reference: 'ADVANCE',
+          debit: 0,
+          credit: advanceTrans.amount,
+          balance: 0, // Will be calculated after sorting
+          type: 'advance_payment'
+        });
+      }
+    });
+
     // Sort by date in ascending order
     allEntries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -352,7 +398,7 @@ const MahajanStatement: React.FC<MahajanStatementProps> = ({ mahajan }) => {
       if (entry.type === 'bill_disbursement') {
         entry.balance = runningBalance + entry.debit;
         runningBalance += entry.debit;
-      } else if (entry.type === 'payment_paid' || entry.type === 'firm_payment' || entry.type === 'partner_payment') {
+      } else if (entry.type === 'payment_paid' || entry.type === 'firm_payment' || entry.type === 'partner_payment' || entry.type === 'advance_payment') {
         entry.balance = runningBalance - entry.credit;
         runningBalance -= entry.credit;
       }

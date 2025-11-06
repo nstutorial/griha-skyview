@@ -327,12 +327,30 @@ const MahajanDetails: React.FC<MahajanDetailsProps> = ({ mahajan, onBack, onUpda
       // If there's remaining payment (overpayment), store it as advance
       if (remainingPayment > 0) {
         const currentAdvance = mahajanData.advance_payment || 0;
+        
+        // Update mahajan's advance payment balance
         const { error: advanceError } = await supabase
           .from('mahajans')
           .update({ advance_payment: currentAdvance + remainingPayment })
           .eq('id', mahajan.id);
 
         if (advanceError) throw advanceError;
+
+        // Insert advance payment transaction record
+        try {
+          await supabase
+            .from('advance_payment_transactions' as any)
+            .insert({
+              user_id: user.id,
+              mahajan_id: mahajan.id,
+              amount: remainingPayment,
+              payment_date: paymentData.payment_date,
+              payment_mode: paymentData.payment_mode,
+              notes: `Overpayment from bill payments${paymentData.notes ? ' - ' + paymentData.notes : ''}`,
+            });
+        } catch (err) {
+          console.log('Advance payment transaction table not available yet');
+        }
 
         toast({
           title: 'Payment recorded',
